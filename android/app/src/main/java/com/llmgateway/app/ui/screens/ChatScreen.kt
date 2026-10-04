@@ -31,7 +31,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-data class UiMessage(val role: String, val content: String, val isStreaming: Boolean = false)
+data class UiMessage(
+    val role: String,
+    val content: String,
+    val isStreaming: Boolean = false,
+    val isError: Boolean = false
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +46,7 @@ fun ChatScreen() {
     var currentModel by remember { mutableStateOf("gpt-4o") }
     var showModelPicker by remember { mutableStateOf(false) }
     var isSending by remember { mutableStateOf(false) }
+    var lastUserMessage by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
@@ -50,11 +56,14 @@ fun ChatScreen() {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
-    fun send() {
-        if (input.isBlank() || isSending) return
-        val userMsg = input.trim()
-        input = ""
+    fun sendMessage(userMsg: String) {
+        if (isSending) return
+        lastUserMessage = userMsg
         isSending = true
+        // 移除上一条失败的助手消息（如果有）
+        if (messages.isNotEmpty() && messages.last().isError) {
+            messages = messages.dropLast(1)
+        }
         messages = messages + UiMessage("user", userMsg)
         messages = messages + UiMessage("assistant", "", isStreaming = true)
 
@@ -69,11 +78,23 @@ fun ChatScreen() {
                 val reply = resp.choices.firstOrNull()?.message?.content ?: ""
                 messages = messages.dropLast(1) + UiMessage("assistant", reply)
             } catch (e: Exception) {
-                messages = messages.dropLast(1) + UiMessage("assistant", "请求失败：${e.message}")
+                messages = messages.dropLast(1) + UiMessage("assistant", "请求失败，点击重试", isError = true)
             } finally {
                 isSending = false
             }
         }
+    }
+
+    fun send() {
+        if (input.isBlank() || isSending) return
+        val userMsg = input.trim()
+        input = ""
+        sendMessage(userMsg)
+    }
+
+    fun retry() {
+        if (lastUserMessage.isBlank() || isSending) return
+        sendMessage(lastUserMessage)
     }
 
     Column(Modifier.fillMaxSize().background(White)) {
@@ -118,7 +139,7 @@ fun ChatScreen() {
                 }
             }
             items(messages) { msg ->
-                MessageBubble(msg)
+                MessageBubble(msg, onRetry = { retry() })
             }
         }
 
@@ -196,26 +217,46 @@ fun ChatScreen() {
 }
 
 @Composable
-private fun MessageBubble(msg: UiMessage) {
+private fun MessageBubble(msg: UiMessage, onRetry: () -> Unit) {
     val isUser = msg.role == "user"
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+        horizontalAlignment = if (isUser) Alignment.End else Alignment.Start
     ) {
         Box(
             modifier = Modifier
                 .widthIn(max = 280.dp)
-                .clip(RoundedCornerShape(if (isUser) 14.dp else 14.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .background(if (isUser) Black else White)
                 .border(if (isUser) 0.dp else 1.dp, if (isUser) Color.Transparent else Border, RoundedCornerShape(14.dp))
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
             Text(
-                if (msg.isStreaming && msg.content.isEmpty()) "..." else msg.content,
-                color = if (isUser) White else TextPrimary,
+                when {
+                    msg.isStreaming && msg.content.isEmpty() -> "..."
+                    msg.isError -> "请求失败，点击重试"
+                    else -> msg.content
+                },
+                color = when {
+                    isUser -> White
+                    msg.isError -> Error
+                    else -> TextPrimary
+                },
                 fontSize = 14.sp,
                 lineHeight = 20.sp
             )
+        }
+        if (msg.isError && !isUser) {
+            Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .border(1.dp, Black, RoundedCornerShape(8.dp))
+                    .clickable { onRetry() }
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Text("重试", color = Black, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }

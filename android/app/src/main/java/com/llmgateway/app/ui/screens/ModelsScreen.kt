@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,13 +35,25 @@ fun ModelsScreen() {
     var models by remember { mutableStateOf(listOf<ModelInfo>()) }
     var search by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("全部") }
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    fun loadModels() {
+        loading = true
+        error = ""
         scope.launch {
-            try { models = ApiClient.service.modelCatalog().models } catch (_: Exception) {}
+            try {
+                models = ApiClient.service.modelCatalog().models
+                loading = false
+            } catch (e: Exception) {
+                error = "加载失败，请检查网络后重试"
+                loading = false
+            }
         }
     }
+
+    LaunchedEffect(Unit) { loadModels() }
 
     val filtered = models.filter {
         (category == "全部" || it.category == categoryMap(category)) &&
@@ -104,13 +117,45 @@ fun ModelsScreen() {
 
         Spacer(Modifier.height(16.dp))
 
-        // 模型列表
-        LazyColumn(
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(filtered) { model ->
-                ModelCard(model)
+        // 内容区域
+        when {
+            loading -> {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Black, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
+                }
+            }
+            error.isNotEmpty() -> {
+                Column(
+                    Modifier.fillMaxWidth().weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(error, color = Error, fontSize = 13.sp)
+                    Spacer(Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .border(1.dp, Black, RoundedCornerShape(8.dp))
+                            .clickable { loadModels() }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Refresh, null, tint = Black, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("重新加载", color = Black, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            }
+            else -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(filtered) { model ->
+                        ModelCard(model)
+                    }
+                }
             }
         }
     }
@@ -127,7 +172,6 @@ private fun ModelCard(model: ModelInfo) {
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 模型图标（首字母方块）
         Box(
             modifier = Modifier
                 .size(40.dp)

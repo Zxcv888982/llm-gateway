@@ -26,3 +26,6 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+
+# Server runtime data
+server/data/

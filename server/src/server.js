@@ -13,10 +13,24 @@ import statsRoutes from './routes/stats.js';
 
 const app = express();
 
+// 健康检查放在所有中间件之前，不被限流、不记日志、最快响应
+app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
 // 安全 & 日志
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+// 请求超时处理
+app.use((req, res, next) => {
+  res.setTimeout(config.requestTimeout, () => {
+    if (!res.headersSent) {
+      res.status(408).json({ error: 'Request timeout', code: 'REQUEST_TIMEOUT' });
+    }
+  });
+  next();
+});
+
 app.use(morgan('combined'));
 
 // 全局限流
@@ -29,8 +43,6 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
-
 app.use('/api/auth', authRoutes);
 app.use('/api', keyRoutes);
 app.use('/api', statsRoutes);
@@ -38,7 +50,12 @@ app.use('/v1', chatRoutes);
 
 app.use((err, req, res, next) => {
   console.error('[error]', err.message);
-  res.status(500).json({ error: 'Internal server error' });
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'Invalid JSON', code: 'INVALID_JSON' });
+  }
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' });
+  }
 });
 
 // 优雅关闭

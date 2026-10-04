@@ -12,10 +12,10 @@ android {
         applicationId = "com.llmgateway.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 3
+        versionName = "1.2.0"
         vectorDrawables { useSupportLibrary = true }
-        buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://wixlbntxyqit.cloud.sealos.io\"")
     }
 
     buildTypes {

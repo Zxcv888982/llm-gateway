@@ -9,4 +9,7 @@ export const config = {
   adminPassword: process.env.ADMIN_PASSWORD || 'admin123',
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '300'),
+  requestTimeout: parseInt(process.env.REQUEST_TIMEOUT || '30000'),
+  loginMaxAttempts: parseInt(process.env.LOGIN_MAX_ATTEMPTS || '5'),
+  loginLockoutMs: parseInt(process.env.LOGIN_LOCKOUT_MS || '300000'),
 };

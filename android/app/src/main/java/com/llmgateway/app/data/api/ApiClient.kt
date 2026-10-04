@@ -55,8 +55,8 @@ object ApiClient {
             .addInterceptor(authInterceptor)
             .addInterceptor(unauthorizedInterceptor)
             .addInterceptor(logging)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
 

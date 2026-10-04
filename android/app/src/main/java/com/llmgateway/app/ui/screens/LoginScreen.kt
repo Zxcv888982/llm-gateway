@@ -1,5 +1,6 @@
 package com.llmgateway.app.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -130,7 +132,18 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 Text(if (isLogin) "登录" else "注册", color = White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             }
         }
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(16.dp))
+
+        val context = LocalContext.current
+        Text(
+            "忘记密码？",
+            color = TextMuted,
+            fontSize = 12.sp,
+            modifier = Modifier.clickable {
+                Toast.makeText(context, "请联系管理员重置密码", Toast.LENGTH_SHORT).show()
+            }
+        )
+        Spacer(Modifier.height(16.dp))
         Text("默认管理员 admin / admin123", color = TextMuted, fontSize = 11.sp)
     }
 }

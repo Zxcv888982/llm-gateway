@@ -10,7 +10,9 @@ export const db = knex({
   client: isPG ? 'pg' : 'better-sqlite3',
   connection: isPG ? config.databaseUrl : { filename: config.dbPath },
   useNullAsDefault: !isPG,
-  pool: { min: 2, max: 20 },
+  pool: isPG
+    ? { min: 0, max: 10, acquireTimeoutMillis: 30000, createTimeoutMillis: 30000, idleTimeoutMillis: 30000, reapIntervalMillis: 1000 }
+    : { min: 2, max: 20 },
 });
 
 const now = isPG ? db.raw('EXTRACT(EPOCH FROM NOW())::int') : db.raw("strftime('%s','now')");
