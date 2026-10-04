@@ -3,7 +3,7 @@ package com.llmgateway.app.data.model
 import com.google.gson.annotations.SerializedName
 
 // ===== Auth =====
-data class AuthRequest(val username: String, val password: String, val email: String? = null)
+data class AuthRequest(val username: String, val password: String, @SerializedName("confirm_password") val confirmPassword: String? = null, val email: String? = null)
 data class ChangePasswordRequest(@SerializedName("old_password") val oldPassword: String, @SerializedName("new_password") val newPassword: String)
 data class AuthResponse(val token: String, val user: User)
 data class UserResponse(val user: User)

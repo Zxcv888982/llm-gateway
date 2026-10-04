@@ -59,6 +59,9 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
     fun submit() {
         if (username.isBlank()) { error = "请输入用户名"; return }
         if (password.length < 6) { error = "密码至少 6 位"; return }
+        if (!isLogin && !password.matches(Regex("^(?=.*[A-Za-z])(?=.*\\d).{6,}$"))) {
+            error = "密码需包含字母和数字"; return
+        }
         if (!isLogin && password != confirmPassword) { error = "两次密码不一致"; return }
 
         error = ""
@@ -68,7 +71,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
                 val resp = if (isLogin)
                     ApiClient.service.login(AuthRequest(username, password))
                 else
-                    ApiClient.service.register(AuthRequest(username, password))
+                    ApiClient.service.register(AuthRequest(username, password, confirmPassword))
                 ApiClient.getTokenStore().saveToken(resp.token)
                 onLoginSuccess()
             } catch (e: Exception) {
@@ -117,13 +120,16 @@ fun LoginScreen(onLoginSuccess: () -> Unit) {
             Spacer(Modifier.height(12.dp))
         }
 
+        val formValid = username.isNotBlank() && password.length >= 6 &&
+            (isLogin || (password.matches(Regex("^(?=.*[A-Za-z])(?=.*\\d).{6,}$")) && password == confirmPassword))
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(44.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(if (loading || username.isBlank() || password.length < 6) TextMuted else Black)
-                .clickable(enabled = !loading && username.isNotBlank() && password.length >= 6) { submit() },
+                .background(if (loading || !formValid) TextMuted else Black)
+                .clickable(enabled = !loading && formValid) { submit() },
             contentAlignment = Alignment.Center
         ) {
             if (loading) {
