@@ -1,0 +1,81 @@
+services:
+  # ===== PostgreSQL 数据库 =====
+  postgres:
+    image: postgres:16-alpine
+    container_name: llm-gateway-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-llmgateway}
+      POSTGRES_USER: ${POSTGRES_USER:-llmgateway}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?database password required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-llmgateway} -d ${POSTGRES_DB:-llmgateway}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  # ===== 后端应用 =====
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: llm-gateway-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-llmgateway}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-llmgateway}
+      JWT_SECRET: ${JWT_SECRET:?jwt secret required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - internal
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ===== Nginx 反向代理 + HTTPS =====
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: llm-gateway-nginx
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+      - ./nginx/logs:/var/log/nginx
+      - ./nginx/html:/usr/share/nginx/html
+    networks:
+      - web
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  web:
+    driver: bridge

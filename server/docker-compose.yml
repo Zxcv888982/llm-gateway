@@ -1,0 +1,14 @@
+services:
+  llm-gateway:
+    build: .
+    container_name: llm-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET:-change-me-to-a-random-string}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}

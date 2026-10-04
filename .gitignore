@@ -1,0 +1,28 @@
+# APK 构建产物
+*.apk
+*.aab
+
+# Node
+node_modules/
+npm-debug.log*
+
+# 环境变量
+.env
+.env.local
+.env.production
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Android build
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties

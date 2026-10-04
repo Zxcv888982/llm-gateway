@@ -1,0 +1,29 @@
+# Render 免费部署配置
+# 数据库用外部免费 PostgreSQL（Supabase/Neon），不占用 Render 资源
+services:
+  - type: web
+    name: llm-gateway
+    runtime: docker
+    dockerfilePath: ./server/Dockerfile
+    dockerContext: ./server
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      # 从 Supabase/Neon 复制连接字符串，格式：
+      # postgresql://user:password@host:5432/dbname?sslmode=require
+      - key: DATABASE_URL
+        sync: false
+      # 用 openssl rand -hex 32 生成，或随便填一串长随机字符
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: ADMIN_PASSWORD
+        value: admin123
+      - key: RATE_LIMIT_MAX
+        value: 100
+    healthCheckPath: /health
+    autoDeploy: yes
